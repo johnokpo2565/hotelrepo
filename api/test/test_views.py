@@ -1,6 +1,12 @@
 from .test_setup import TestSetup
 from rest_framework import status
 from unittest.mock import patch
+from django.urls import reverse
+from user.models import User
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.test import APIClient
+from django.urls import get_resolver
+
 
 class TestViews(TestSetup):
     def test_user_cannot_register_with_no_data(self):
@@ -16,7 +22,6 @@ class TestViews(TestSetup):
         self.assertEqual(res.data['first_name'][0],'This field may not be blank.')
         self.assertEqual(res.data['last_name'][0], 'This field may not be blank.')
 
-    
     def test_user_can_register(self):
         res = self.client.post(self.register_url, self.user_data, format="json")
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
@@ -25,12 +30,10 @@ class TestViews(TestSetup):
     def test_user_can_login(self, MockLoginSerialier):
 
         # Creating a user
-
         res = self.client.post(self.register_url, self.user_data, format="json")
         self.assertEqual(res.status_code, status.HTTP_201_CREATED)
 
         # Attempting to login in the user
-
         mock_serializer = MockLoginSerialier.return_value
         mock_serializer.is_valid.return_value = True
         mock_serializer.validated_data = {
@@ -43,7 +46,26 @@ class TestViews(TestSetup):
             'password':'1234567'
         }
 
-       
-
         res = self.client.post(self.login_url, validate_data, format="json")
         self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+
+    
+    def test_make_a_booking(self):
+
+        user_data = User.objects.create(
+            first_name="John",
+            last_name="James",
+            email ="john@gmail.com",
+            password="1234567",
+        )
+
+        refresh = RefreshToken.for_user(user_data)
+        client = APIClient()
+        token = str(refresh.access_token)
+
+        booking_url = reverse('Users-book-room', kwargs={'pk':user_data.public_id})
+        # client.force_authenticate(user=user_data) This can work as well
+        client.credentials(HTTP_AUTHORIZATION=f'Bearer {token}')
+        res = client.post(booking_url, self.room_data, format="json")
+        self.assertEqual(res.status_code, status.HTTP_201_CREATED)
