@@ -1,4 +1,5 @@
 from rest_framework.test import APITestCase
+from django.test import TransactionTestCase
 from django.urls import reverse
 
 class TestSetup(APITestCase):
@@ -13,7 +14,7 @@ class TestSetup(APITestCase):
             "email":"john@gmail.com",
             "password":"1234567",
         }
-
+        
         return super().setUp()
     
 
